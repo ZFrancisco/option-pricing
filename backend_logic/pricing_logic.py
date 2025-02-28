@@ -40,7 +40,6 @@ def calculate_expected_vector(paths_df, k, M):
     copy_paths = copy_paths.iloc[:, k+1:]
     return copy_paths.mean(axis=1)
 
-
 #create polynomial regression model for each time step
 def create_model(design_matrix, target_Y):
     model = LinearRegression()
@@ -59,6 +58,9 @@ def exercise_decision(option_exercise, strike_price):
     return np.maximum(option_exercise - strike_price, 0)
 
 #backtracking algorithm to return best timestamp and discounted best exercise value
+
+#DISCOUNTING LOGIC IS BUTCHERED
+
 def backtracking(M, r, k, beta, t, initial_price_asset, strike_price):
     paths = simulate_stock_price(initial_price_asset, r, beta, t, M)
     exercise_df = pd.DataFrame(np.zeros((N, M + 1)))
@@ -74,8 +76,14 @@ def backtracking(M, r, k, beta, t, initial_price_asset, strike_price):
         best_choice = np.where(predicted_exercise_value > current_exercise_value, predicted_exercise_value, current_exercise_value)
         exercise_df.iloc[in_the_money.index, i] = best_choice
         recent_non_zero[in_the_money.index] = i
-    expected_option_price = np.mean(recent_non_zero)
-    return exercise_df, expected_option_price
+    #ONLY WORKS FOR CONSTANT RISK FREE RATES
+    expected_option_price = recent_non_zero
+
+    for i in range(len(expected_option_price)):
+        expected_option_price[i] = np.exp(-(r * i/M)) * expected_option_price[i]
+    option_price = np.mean(recent_non_zero)
+
+    return exercise_df, option_price
 
 def option_pricing(M, r, k, beta, t, initial_price_asset, strike_price):
     df, option_price = backtracking(M, r, k, beta, t, initial_price_asset, strike_price)
