@@ -36,5 +36,5 @@ def get_stock_data(stock, start_date, end_date):
 
 #test = finnhub_client.stock_candles('AAPL', 'D', date_to_unix('2021-01-01'), date_to_unix('2021-01-05'))
 
-table = get_stock_data('AAPL', '2021-01-01', '2021-01-05')
+table = get_stock_data('AAPL', '2021-01-01', '2021-02-05')
 print(table)
