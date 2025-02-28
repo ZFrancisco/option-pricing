@@ -5,7 +5,6 @@ import numpy.random as npr
 import sklearn as sk
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
-from sklearn.tests import CrossValidation
  
 # S~LN(mu, sigma)
 #S(t + deltat) = S(t) * exp((r - sigma^2/2) * deltat + sigma * sqrt(deltat) * Z), Z = N(0, 1)
@@ -29,6 +28,9 @@ def run_simulation(S_t, r, sigma, T, M):
         paths[i, 1:] = path
     return paths
 
+monte_paths = run_simulation(S0, r, sigma, t, M)
+plt.plot(monte_paths.T)
+plt.show()
 
 
 # Y = exp(-rdt) * F(S^k_n+1, t_n+1)
