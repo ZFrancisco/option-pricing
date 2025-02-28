@@ -1,1 +1,1 @@
-# mont carlo option pricing
+# monte carlo option pricing for american call options
