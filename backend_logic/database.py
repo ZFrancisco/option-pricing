@@ -2,16 +2,20 @@ import sqlite3
 from sqlite3 import Error
 
 
-conn = sqlite3.connect(r"C:\Users\Zack\finnhub_data.db")
+conn = sqlite3.connect(r"C:\Users\Zack\option-pricing\yf_db.db")
 cursor = conn.cursor()
 
-def add_stock_price(stock, date, open_price, high_price, low_price, close_price, volume):
+def add_stock_price(date, symbol, open, high, low, close, volume):
     try:
-        cursor.execute("INSERT INTO stocks (symbol, last_price, timestamp, volume) VALUES (?, ?, ?, ?, ?, ?, ?)", (stock, date, open_price, high_price, low_price, close_price, volume))
+        cursor.execute("INSERT INTO stocks (datestamp, symbol, open, high, low, close, volume) VALUES (?, ?, ?, ?, ?, ?, ?)", (date, symbol, open, high, low, close, volume))
         conn.commit()
     except Error as e:
         print(e)
 
-def check_if_exists(stock, date):
-    cursor.execute("SELECT * FROM stocks WHERE stock = ? AND date = ?", (stock, date))
+def check_if_exists(stock, start, end):
+    cursor.execute("SELECT * FROM stocks WHERE symbol = ? AND datestamp >= ? AND datestamp <= ?", (stock, start, end))
+    return cursor.fetchall()
+
+def get_rows(stock, start, end):
+    cursor.execute("SELECT * FROM stocks WHERE symbol = ? AND datestamp >= ? AND datestamp <= ?", (stock, start, end))
     return cursor.fetchall()

@@ -12,9 +12,9 @@ from sklearn.model_selection import train_test_split
 def simulate_stock_price(S_t, r, sigma, T, M):
     return S_t * np.exp(np.cumsum((r - sigma ** 2 / 2) * T / M + sigma * np.sqrt(T / M) * npr.standard_normal(M)))
 
-S0 = 100      
+initial_price_asset = 100      
 r = 0.0412 # 1 year treasury bond rate 
-sigma = 0.2   
+beta = 0.2   
 t = 1         
 N = 10000     
 M = 252 
@@ -28,7 +28,7 @@ def run_simulation(S_t, r, sigma, T, M):
         paths[i, 1:] = path
     return paths
 
-monte_paths = run_simulation(S0, r, sigma, t, M)
+monte_paths = run_simulation(initial_price_asset, r, beta, t, M)
 plt.plot(monte_paths.T)
 plt.show()
 
