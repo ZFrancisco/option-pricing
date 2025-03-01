@@ -1,8 +1,9 @@
 import sqlite3
 from sqlite3 import Error
 
-
-conn = sqlite3.connect(r"C:\Users\Zack\option-pricing\yf_db.db")
+## FIX THIS
+conn = sqlite3.connect(r"/Users/zackaryfrancisco/option_pricing/yf_db.db")
+## FIX THIS
 cursor = conn.cursor()
 
 def add_stock_price(date, symbol, open, high, low, close, volume):

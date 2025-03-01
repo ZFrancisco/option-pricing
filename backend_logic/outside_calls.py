@@ -17,14 +17,15 @@ columns = ['datestamp', 'symbol', 'open', 'high', 'low', 'close', 'volume']
 def date_to_unix(date):
     return int(time.mktime(datetime.datetime.strptime(date, "%Y-%m-%d").timetuple()))   
 
-def get_stock_data(stock, start_date, end_date):
+def get_stock_data(stock):
     # maybe move this API 
     # inside an else clause
     # if its not already in db
     symbol_instace = yf.Ticker(stock)
-    stock_price = symbol_instace.history(start=start_date, end=end_date)
+    stock_price = symbol_instace.history(period='5y')
     stock_price.index = stock_price.index.strftime('%Y-%m-%d')
-    already_exists = check_if_exists(stock, start_date, end_date)
+    today = datetime.today().strftime('%Y-%m-%d')
+    already_exists = check_if_exists(stock, today - pd.DateOffset(years=5), today)
     repeated_indices = []
     for row in already_exists:
         if row[0] in stock_price.index:
@@ -32,9 +33,6 @@ def get_stock_data(stock, start_date, end_date):
     stock_price = stock_price.drop(repeated_indices)
     for index, row in stock_price.iterrows():
         add_stock_price(index, stock, row['Open'], row['High'], row['Low'], row['Close'], row['Volume'])
-    return pd.DataFrame(get_rows(stock, start_date, end_date), columns=columns)
+    return pd.DataFrame(get_rows(stock, today - pd.DateOffset(years=5), today), columns=columns)
 
 #test = finnhub_client.stock_candles('AAPL', 'D', date_to_unix('2021-01-01'), date_to_unix('2021-01-05'))
-
-table = get_stock_data('AAPL', '2021-01-01', '2021-02-05')
-print(table)
