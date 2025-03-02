@@ -1,4 +1,3 @@
-from backend_logic.outside_calls import get_stock_data
 import yfinance as yf
 
 def calculate_beta(ticker):

@@ -8,37 +8,31 @@ from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
 import math
 import scipy
+import yfinance as yf
  
 # S~LN(mu, sigma)
 #S(t + deltat) = S(t) * exp((r - sigma^2/2) * deltat + sigma * sqrt(deltat) * Z), Z = N(0, 1)
 
 #invariances
-initial_price_asset = 100      
-r = 0.0412 # 1 year treasury bond rate 
-beta = 0.2   
-t = 1         
-N = 10000     
-M = 252
-strike_price = 105 
-
 #run monte carlo simulation to generate stock price paths
-def simulate_stock_price(S_t, r, sigma, T, M):
+def simulate_stock_price(S_t, r, sigma, T, M, N=10000):
     paths = np.zeros((N, M+1))
     paths[:, 0] = S_t
     for i in range(N):
-        path =  S_t * np.exp(np.cumsum((r - sigma ** 2 / 2) * T / M + sigma * np.sqrt(T / M) * npr.standard_normal(M)))
+        path = S_t * np.exp(np.cumsum((r - sigma ** 2 / 2) * (T / M) + sigma * np.sqrt(T / M) * npr.standard_normal(M)))
         paths[i, 1:] = path
     return pd.DataFrame(paths)
 
 # F(w; tk) = E_Q[k SIGMA j = k+1 exp(- t_j INTEGRAL t_k (r)) * C(omega, tj; tk, T) | F_t_k], where F(omega, k) is the value of continuation from timestep tk to T
-def calculate_expected_vector(paths_df, k, M):
+def calculate_expected_vector(paths_df, k, M, t, r):
+    #design matrix
     copy_paths =  paths_df.copy()
-    for j in range(k+1, M + 1, t):
-        discount_factor = np.exp(-(scipy.integrate.quad(lambda x: r, k, j)[0]))
-        discounted_column = discount_factor * copy_paths.iloc[:, j]
+    for j in range(0, copy_paths.shape[1], t):
+        discount_factor = math.exp(-(r * (j/M)))
+        cash_flow = exercise_decision(copy_paths.iloc[:, j], strike_price)
+        discounted_column = discount_factor * cash_flow
         copy_paths.iloc[:, j] = discounted_column
-    copy_paths = copy_paths.iloc[:, k+1:]
-    return copy_paths.mean(axis=1)
+    return np.sum(copy_paths, axis=1)
 
 #create polynomial regression model for each time step
 def create_model(design_matrix, target_Y):
@@ -47,11 +41,17 @@ def create_model(design_matrix, target_Y):
     return model
 
 #design matrix for each time step
-def create_design_matrix(paths_df, k, t, M):
+def create_design_matrix(paths_df, k, t, M, r):
     unaltered_design = paths_df.iloc[:, k+1:]
-    data = {'bias': 1, 'X': unaltered_design, 'X^2': unaltered_design ** 2, 'X^3': unaltered_design ** 3}
-    target_Y = calculate_expected_vector(paths_df, k, M)
-    return pd.DataFrame(data), target_Y
+    num_columns = unaltered_design.shape[1]
+    bias, X, X_2, X_3 = pd.DataFrame({'bias':np.ones(unaltered_design.shape[0])}), unaltered_design, unaltered_design ** 2, unaltered_design ** 3
+    X, X_2, X_3 = X.set_axis(np.full(num_columns, 'X'), axis=1), X_2.set_axis(np.full(num_columns, 'X^2'), axis=1), X_3.set_axis(np.full(num_columns, 'X^3'), axis=1)
+    bias.index = X.index
+    df = bias.merge(X, left_index=True, right_index=True)
+    df = df.merge(X_2, left_index=True, right_index=True)
+    df = df.merge(X_3, left_index=True, right_index=True)
+    target_Y = calculate_expected_vector(unaltered_design, k, M, t, r)
+    return df, target_Y
 
 #profit from exercising the option
 def exercise_decision(option_exercise, strike_price):
@@ -59,35 +59,52 @@ def exercise_decision(option_exercise, strike_price):
 
 #backtracking algorithm to return best timestamp and discounted best exercise value
 
-#DISCOUNTING LOGIC IS BUTCHERED
-
 def backtracking(M, r, k, beta, t, initial_price_asset, strike_price):
-    paths = simulate_stock_price(initial_price_asset, r, beta, t, M)
-    exercise_df = pd.DataFrame(np.zeros((N, M + 1)))
-    exercise_df.iloc[:, M+1] = exercise_decision(paths.iloc[:, M+1], strike_price)
+    paths = simulate_stock_price(initial_price_asset, r, beta, t, M, N)
     recent_non_zero = np.zeros(N)
-    for i in range(M, -1, -t):
-        in_the_money = paths[exercise_decision(paths.iloc[:, i]) > 0]
-        design_matrix, target_Y = create_design_matrix(in_the_money, k, t, M)
-        model = create_model(design_matrix, target_Y)
-        predicted_vector = model.predict(design_matrix)
-        predicted_exercise_value = exercise_decision(predicted_vector, strike_price)
-        current_exercise_value = exercise_decision(in_the_money, strike_price)
-        best_choice = np.where(predicted_exercise_value > current_exercise_value, predicted_exercise_value, current_exercise_value)
-        exercise_df.iloc[in_the_money.index, i] = best_choice
-        recent_non_zero[in_the_money.index] = i
-    #ONLY WORKS FOR CONSTANT RISK FREE RATES
-    expected_option_price = recent_non_zero
-
-    for i in range(len(expected_option_price)):
-        expected_option_price[i] = np.exp(-(r * i/M)) * expected_option_price[i]
-    option_price = np.mean(recent_non_zero)
-
-    return exercise_df, option_price
+    timestamps = np.zeros(N)
+    for i in range(M - 1, -1, -t):
+        in_the_money = paths[exercise_decision(paths.iloc[:, i], strike_price) > 0]
+        if in_the_money.empty:
+            predicted_vector = np.exp(-r * (1 / M)) * in_the_money.iloc[:, i + 1]
+            predicted_exercise_value = exercise_decision(predicted_vector, strike_price)
+            current_exercise_value = exercise_decision(in_the_money.iloc[:, i], strike_price)
+            best_choice = np.where(current_exercise_value > predicted_exercise_value, current_exercise_value, 0)
+            zeroes = np.nonzero(best_choice)[0]
+            recent_non_zero[zeroes] = best_choice[zeroes]
+            timestamps[zeroes] = i
+        else:
+            design_matrix, target_Y = create_design_matrix(in_the_money, i, t, M, r)
+            model = create_model(design_matrix, target_Y)
+            predicted_vector = model.predict(design_matrix)
+            current_exercise_value = exercise_decision(in_the_money.iloc[:, i], strike_price)
+            predicted_exercise_value = exercise_decision(predicted_vector, strike_price)
+            best_choice = np.where(current_exercise_value > predicted_exercise_value, current_exercise_value, 0)
+            zeroes = np.nonzero(best_choice)[0]
+            recent_non_zero[zeroes] = best_choice[zeroes]
+            timestamps[zeroes] = i      
+    print(len(np.nonzero(recent_non_zero)[0]), "non zero values")
+    for i in range(len(recent_non_zero)):
+        timestamp = timestamps[i]
+        recent_non_zero[i] = np.exp(-(r * (timestamp/M))) * recent_non_zero[i]
+    return np.mean(recent_non_zero)
 
 def option_pricing(M, r, k, beta, t, initial_price_asset, strike_price):
-    df, option_price = backtracking(M, r, k, beta, t, initial_price_asset, strike_price)
+    option_price = backtracking(M, r, k, beta, t, initial_price_asset, strike_price)
     return option_price
+
+
+N = 100000
+M, r, k, beta, t, initial_price_asset, strike_price = 5, 0.0412, 0, 0.602, 1, 292.98, 320
+expected_price = option_pricing(M, r, k, beta, t, initial_price_asset, strike_price)
+simulate = simulate_stock_price(initial_price_asset, r, beta, t, M)
+print(expected_price)
+
+
+# simulate = simulate_stock_price(initial_price_asset, r, beta, t, M)
+# print(simulate)
+# plt.plot(simulate.T)
+# plt.show()
 
 # F^k_n+1 = F(S^k_n+1, t_n+1)
 # Y = a0X + a1X^2 ... + aN-1X^N + aN

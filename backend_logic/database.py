@@ -2,7 +2,7 @@ import sqlite3
 from sqlite3 import Error
 
 ## FIX THIS
-conn = sqlite3.connect(r"/Users/zackaryfrancisco/option_pricing/yf_db.db")
+conn = sqlite3.connect(r"C:\Users\Zack\option-pricing\db\yf_db.db")
 ## FIX THIS
 cursor = conn.cursor()
 
