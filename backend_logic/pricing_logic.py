@@ -24,7 +24,7 @@ def simulate_stock_price(S_t, r, sigma, T, M, N=10000):
     return pd.DataFrame(paths)
 
 # F(w; tk) = E_Q[k SIGMA j = k+1 exp(- t_j INTEGRAL t_k (r)) * C(omega, tj; tk, T) | F_t_k], where F(omega, k) is the value of continuation from timestep tk to T
-def calculate_expected_vector(paths_df, k, M, t, r):
+def calculate_expected_vector(paths_df, k, M, t, r, strike_price):
     #design matrix
     copy_paths =  paths_df.copy()
     for j in range(0, copy_paths.shape[1], t):
@@ -41,7 +41,7 @@ def create_model(design_matrix, target_Y):
     return model
 
 #design matrix for each time step
-def create_design_matrix(paths_df, k, t, M, r):
+def create_design_matrix(paths_df, k, t, M, r, strike_price):
     unaltered_design = paths_df.iloc[:, k+1:]
     num_columns = unaltered_design.shape[1]
     bias, X, X_2, X_3 = pd.DataFrame({'bias':np.ones(unaltered_design.shape[0])}), unaltered_design, unaltered_design ** 2, unaltered_design ** 3
@@ -50,7 +50,7 @@ def create_design_matrix(paths_df, k, t, M, r):
     df = bias.merge(X, left_index=True, right_index=True)
     df = df.merge(X_2, left_index=True, right_index=True)
     df = df.merge(X_3, left_index=True, right_index=True)
-    target_Y = calculate_expected_vector(unaltered_design, k, M, t, r)
+    target_Y = calculate_expected_vector(unaltered_design, k, M, t, r, strike_price)
     return df, target_Y
 
 #profit from exercising the option
@@ -59,7 +59,7 @@ def exercise_decision(option_exercise, strike_price):
 
 #backtracking algorithm to return best timestamp and discounted best exercise value
 
-def backtracking(M, r, k, beta, t, initial_price_asset, strike_price):
+def backtracking(M, r, k, beta, t, initial_price_asset, strike_price, N=10000):
     paths = simulate_stock_price(initial_price_asset, r, beta, t, M, N)
     recent_non_zero = np.zeros(N)
     timestamps = np.zeros(N)
@@ -74,7 +74,7 @@ def backtracking(M, r, k, beta, t, initial_price_asset, strike_price):
             recent_non_zero[zeroes] = best_choice[zeroes]
             timestamps[zeroes] = i
         else:
-            design_matrix, target_Y = create_design_matrix(in_the_money, i, t, M, r)
+            design_matrix, target_Y = create_design_matrix(in_the_money, i, t, M, r, strike_price)
             model = create_model(design_matrix, target_Y)
             predicted_vector = model.predict(design_matrix)
             current_exercise_value = exercise_decision(in_the_money.iloc[:, i], strike_price)
@@ -92,13 +92,6 @@ def backtracking(M, r, k, beta, t, initial_price_asset, strike_price):
 def option_pricing(M, r, k, beta, t, initial_price_asset, strike_price):
     option_price = backtracking(M, r, k, beta, t, initial_price_asset, strike_price)
     return option_price
-
-
-N = 100000
-M, r, k, beta, t, initial_price_asset, strike_price = 5, 0.0412, 0, 0.602, 1, 292.98, 320
-expected_price = option_pricing(M, r, k, beta, t, initial_price_asset, strike_price)
-simulate = simulate_stock_price(initial_price_asset, r, beta, t, M)
-print(expected_price)
 
 
 # simulate = simulate_stock_price(initial_price_asset, r, beta, t, M)
