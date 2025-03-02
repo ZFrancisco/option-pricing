@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, jsonify
 from backend_logic.pricing_logic import option_pricing, simulate_stock_price
 from backend_logic.invariance_calculations import calculate_beta, current_asset_price
+import io
+import base64
+from matplotlib.figure import Figure
 
 app = Flask(__name__, static_folder="static", static_url_path="/")
 
@@ -23,14 +26,36 @@ def submit():
         return jsonify({'error': 'Invalid input'}), 400   
     try:    
         stock_ticker = str(data.get('stockTicker'))
-        strike_price = int(data.get('strikePrice'))
-        days_until_expiration = int(data.get('daysUntilExpiration)'))
-    except:
-        return jsonify({'error': 'Invalid input'}), 400
-    beta = calculate_beta(stock_ticker)
+        strike_price = float(data.get('strikePrice'))
+        days_until_expiration = int(data.get('daysUntilExpiration'))
+    except Exception as e:
+        return jsonify({'error': f'Invalid input: {str(e)}'}), 400
+    
+    beta = 0.607 #USE DB TO CALCULATE THIS IN FUTURE
     current_price = current_asset_price(stock_ticker)
     option_price = option_pricing(days_until_expiration, 0.042, 0, beta, 1, current_price, strike_price)
-    return jsonify({'optionPrice': option_price})
+        
+    
+    fig = Figure(figsize=(10, 6))
+    ax = fig.add_subplot(111)
+    simulation_data = simulate_stock_price(current_price, 0.042, beta, 1, days_until_expiration)
+    ax.plot(simulation_data.T)
+    ax.set_title(f'Monte Carlo Simulation for {stock_ticker}')
+    ax.set_xlabel('Days')
+    ax.set_ylabel('Stock Price ($)')
+    
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png')
+    buf.seek(0)
+    
+    img_data = base64.b64encode(buf.getbuffer()).decode("ascii")
+    
+    formatted_price = round(float(option_price), 2)
+    
+    return jsonify({
+        'optionPrice': formatted_price,
+        'simulationImage': img_data
+    })
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -15,11 +15,11 @@ import yfinance as yf
 
 #invariances
 #run monte carlo simulation to generate stock price paths
-def simulate_stock_price(S_t, r, sigma, T, M, N=10000):
+def simulate_stock_price(S_t, r, sigma, t, M, N=10000):
     paths = np.zeros((N, M+1))
     paths[:, 0] = S_t
     for i in range(N):
-        path = S_t * np.exp(np.cumsum((r - sigma ** 2 / 2) * (T / M) + sigma * np.sqrt(T / M) * npr.standard_normal(M)))
+        path = S_t * np.exp(np.cumsum((r - sigma ** 2 / 2) * (t / M) + sigma * np.sqrt(t / M) * npr.standard_normal(M)))
         paths[i, 1:] = path
     return pd.DataFrame(paths)
 
@@ -83,7 +83,6 @@ def backtracking(M, r, k, beta, t, initial_price_asset, strike_price, N=10000):
             zeroes = np.nonzero(best_choice)[0]
             recent_non_zero[zeroes] = best_choice[zeroes]
             timestamps[zeroes] = i      
-    print(len(np.nonzero(recent_non_zero)[0]), "non zero values")
     for i in range(len(recent_non_zero)):
         timestamp = timestamps[i]
         recent_non_zero[i] = np.exp(-(r * (timestamp/M))) * recent_non_zero[i]
