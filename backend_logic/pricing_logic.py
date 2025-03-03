@@ -29,7 +29,7 @@ def calculate_expected_vector(paths_df, k, M, t, r, strike_price):
     #design matrix
     copy_paths =  paths_df.copy()
     for j in range(0, copy_paths.shape[1], t):
-        discount_factor = math.exp(-(r * (j/M)))
+        discount_factor = np.exp(-(r * (j/M)))
         cash_flow = exercise_decision(copy_paths.iloc[:, j], strike_price)
         discounted_column = discount_factor * cash_flow
         copy_paths.iloc[:, j] = discounted_column
