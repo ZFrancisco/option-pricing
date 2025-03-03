@@ -8,7 +8,6 @@ pandas
 nump.random
 sklearn
 sklearn.linear_model
-math
 scipy
 numpy.polynomial.hermite
 sys
