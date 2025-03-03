@@ -4,7 +4,7 @@ yfinance
 gunicorn
 numpy
 pandas
-nump.random
+numpy.random
 sklearn
 sklearn.linear_model
 scipy
