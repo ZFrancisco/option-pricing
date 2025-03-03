@@ -4,6 +4,7 @@ from backend_logic.invariance_calculations import calculate_beta, current_asset_
 import io
 import base64
 from matplotlib.figure import Figure
+import yfinance as yf
 
 app = Flask(__name__, static_folder="static", static_url_path="/")
 
@@ -31,8 +32,10 @@ def submit():
     except Exception as e:
         return jsonify({'error': f'Invalid input: {str(e)}'}), 400
     
-    beta = 0.607 #USE DB TO CALCULATE THIS IN FUTURE
-    current_price = current_asset_price(stock_ticker)
+    instance = yf.Ticker(stock_ticker)
+    beta = calculate_beta(instance) 
+    current_price = current_asset_price(instance)
+    print(beta, current_price)
     option_price = option_pricing(days_until_expiration, 0.042, 0, beta, 1, current_price, strike_price)
         
     

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Monte Carlo Option Pricing Home Page</title>
-  <link rel="stylesheet" href="static/styles.css">
+  <link rel="stylesheet" href="styles.css">
   <style>
     .result-container {
       margin-top: 20px;
@@ -30,25 +30,35 @@
   <header>
     <h1>MCLS Option Price Calculator</h1>
     <nav>
-      <ul class="horizontal-list">
-        <li><a href="/">Home</a></li>
-        <li><a href="/program">Option Price Algorithm</a></li>
-        <li><a href="/contact">Contact</a></li>
+      <ul class = "horizontal-list">
+          <button>
+              <li><a href="/">Home</a></li>
+          </button>
+          <button>
+              <li><a href="/program">Option Price Algorithm</a></li>
+          </button>
+          <button>
+              <li><a href="/contact">Contact</a></li> 
+          </button>
       </ul>
-    </nav>
+  </nav>
   </header>
-  <form id="optionForm">
-    <label for="ticker">Stock Ticker:</label>
-    <input type="text" id="ticker" name="ticker" required>
-    <br>
-    <label for="strike_price">Strike Price:</label>
-    <input type="number" id="strike_price" name="strike_price" step="0.01" required>
-    <br>
-    <label for="days_until_expiration">Days Until Expiration:</label>
-    <input type="number" id="days_until_expiration" name="days_until_expiration" required>
-    <br>
-    <input type="submit" value="Calculate Option Price">
-  </form>
+  <main>
+    <h4>Option pricer</h4>
+    <p>Fill out the stock ticker, the strike price of the contract, and the number of business days until expiration. Example: {AAPL, 240, 252}, Apple at 240 strike for a year contract.</p>
+    <form id="optionForm">
+      <label for="ticker">Stock Ticker:</label>
+      <input type="text" id="ticker" name="ticker" required>
+      <br>
+      <label for="strike_price">Strike Price:</label>
+      <input type="number" id="strike_price" name="strike_price" step="0.01" required>
+      <br>
+      <label for="days_until_expiration">Days Until Expiration:</label>
+      <input type="number" id="days_until_expiration" name="days_until_expiration" required>
+      <br>
+      <input type="submit" value="Calculate Option Price">
+    </form>
+</main>
   
   <div id="result"></div>
   <div id="simulation"></div>
@@ -126,5 +136,8 @@
       });
     });
   </script>
+      <footer>
+        <p>&copy; 2025 Zackary Francisco. All rights reserved. Enabled by yfinance.</p>
+    </footer>
 </body>
 </html>

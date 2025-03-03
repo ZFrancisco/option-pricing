@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home Page</title>
-    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <header>
@@ -22,12 +22,33 @@
                 </button>
             </ul>
         </nav>
+        <h5>See "Option Price Algorithm" for program.</h5>
     </header>
     <main>
         <section id="project_logic">
             <h2>Project Logic</h2>
             <h4>Information about the logic behind this algorithms pricing scheme.</h4>
-            <p>This...</p>
+            <p>This is a project inspired by pricing options using a monte carlo polynomial regression approach to approximate the price of American style call options where the contract can be exercised at any point. 
+                See <a href = https://jfin-swufe.springeropen.com/articles/10.1186/s40854-015-0019-0#:~:text=Results,used%20when%20pricing%20the%20derivative.> this website</a><p>
+                    for a comprehensive approach to this problem.
+            <p>This problem starts by plotting 10,000 simulated monte carlo walks using the Brownian model: <img src="brownian_walk.jpg" alt="Credit: Springer Open"></p>
+                </P> This particular stochastic model helps predict the movement of a stock by using the previous price at t to predict t+1, risk-free rate, the stocks implied volatility, and epsilon random sample from N(0,1)</P>
+            <p>Then, a process of backward induction is underwent from time stamp T-1 to 0 where T is the timestamp of contract expiration. At each timestamp of the backtrack two processes are underwent:
+                <ul>
+                    <li>The value of deferring the contract is evaluated</li>
+                    <li>The value of deferring is compared against immediate exercise to determine the optimal strategy</li>
+                </ul>
+                The formula for approximating the value of deferring can be found by getting the risk free discounted payoff of exercising by discounting the future cash flow of the walk back to the current time stamp and summing
+                these under the expectation of risk-free conditions Q. See: <img src="future_payoff.jpg" alt="Credit: Springer Open"> 
+                <P> Once the expected value of derring the option is calculated for each walk, then a Hermite polynomial is trained on the orthogonal columns of the walks from j=k+1 to T to capture underlying trends in financial movement
+                    to better predict the true expected value of deferring for each walk. See this <a href="https://en.wikipedia.org/wiki/Hermite_polynomials">Wikipedia</a> link for more information on Hermite polynomials.
+                </P>
+                <P>Once the future cash flow is estimated using the Hermite model, then that value of deferring is compared path-by-path to the value of exercising. If immediately exercising is more valuable, the timestamp and immediate exercise cashflow is stored</P>
+                <P>It is important to note that at each step the cash flow value is being discounted back to the current timestamp which is eventually 0, and being evaluated under this function: <img src="exercise.jpg" alt="My code of value of exercising an asset" width = "400"></P>
+                <p>After the backtracking is complete, the stopping points (where the value of immediately exercising is greater than deferring) are discounted to t0 and averaged. This is your expected option price.</p>
+            </p>
+            <h2>Inspiration</h2>
+            <p>I was inspired to undergo this project due to my interest in using stochastic models, such as Brownian Motion, to capture and predict the complexities of the financial market, especially in the American context.</p>
         </section>
     </main>
     <footer>

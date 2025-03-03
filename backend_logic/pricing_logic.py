@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 import numpy.random as npr
 import scipy.integrate
 import sklearn as sk
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.model_selection import train_test_split
 import math
 import scipy
 import yfinance as yf
+from numpy.polynomial.hermite import hermval
  
 # S~LN(mu, sigma)
 #S(t + deltat) = S(t) * exp((r - sigma^2/2) * deltat + sigma * sqrt(deltat) * Z), Z = N(0, 1)
@@ -36,22 +37,22 @@ def calculate_expected_vector(paths_df, k, M, t, r, strike_price):
 
 #create polynomial regression model for each time step
 def create_model(design_matrix, target_Y):
-    model = LinearRegression()
+    model = Ridge(alpha=0.1)
     model.fit(design_matrix, target_Y)
     return model
 
 #design matrix for each time step
-def create_design_matrix(paths_df, k, t, M, r, strike_price):
+def create_design_matrix_hermite_polynomial(paths_df, k, t, M, r, strike_price, max_degree=2):
     unaltered_design = paths_df.iloc[:, k+1:]
-    num_columns = unaltered_design.shape[1]
-    bias, X, X_2, X_3 = pd.DataFrame({'bias':np.ones(unaltered_design.shape[0])}), unaltered_design, unaltered_design ** 2, unaltered_design ** 3
-    X, X_2, X_3 = X.set_axis(np.full(num_columns, 'X'), axis=1), X_2.set_axis(np.full(num_columns, 'X^2'), axis=1), X_3.set_axis(np.full(num_columns, 'X^3'), axis=1)
-    bias.index = X.index
-    df = bias.merge(X, left_index=True, right_index=True)
-    df = df.merge(X_2, left_index=True, right_index=True)
-    df = df.merge(X_3, left_index=True, right_index=True)
+    design_features = pd.DataFrame(index=unaltered_design.index)
+    
+    for col in unaltered_design.columns:
+        for degree in range(max_degree + 1):
+            coeffs = [0] * degree + [1]
+            col_name = f'{col}_H{degree}' 
+            design_features[col_name] = unaltered_design[col].apply(lambda x: hermval(x, coeffs))
     target_Y = calculate_expected_vector(unaltered_design, k, M, t, r, strike_price)
-    return df, target_Y
+    return design_features, target_Y
 
 #profit from exercising the option
 def exercise_decision(option_exercise, strike_price):
@@ -74,7 +75,7 @@ def backtracking(M, r, k, beta, t, initial_price_asset, strike_price, N=10000):
             recent_non_zero[zeroes] = best_choice[zeroes]
             timestamps[zeroes] = i
         else:
-            design_matrix, target_Y = create_design_matrix(in_the_money, i, t, M, r, strike_price)
+            design_matrix, target_Y = create_design_matrix_hermite_polynomial(in_the_money, i, t, M, r, strike_price)
             model = create_model(design_matrix, target_Y)
             predicted_vector = model.predict(design_matrix)
             current_exercise_value = exercise_decision(in_the_money.iloc[:, i], strike_price)
