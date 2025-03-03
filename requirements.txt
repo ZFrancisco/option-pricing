@@ -2,7 +2,6 @@ flask
 matplotlib
 yfinance
 gunicorn
-math
 numpy
 pandas
 nump.random
